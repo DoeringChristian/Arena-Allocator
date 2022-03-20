@@ -1,6 +1,8 @@
 
 pub mod arena;
 
+pub use arena::*;
+
 #[cfg(test)]
 mod tests {
     #[test]

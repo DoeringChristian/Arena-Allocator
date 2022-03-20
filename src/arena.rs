@@ -13,12 +13,22 @@ pub enum ArenaCell<T>{
 ///
 /// An index referring to an index and epoch in an Arena.
 ///
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug)]
 pub struct ArenaIdx<T>{
     index: usize,
     generation: usize,
     _ty: PhantomData<T>,
 }
+
+// Have to implement copy and clone myselfe because of generic.
+impl<T> Clone for ArenaIdx<T>{
+    #[inline]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Copy for ArenaIdx<T>{}
 
 ///
 /// An Arena allocator that keeps track of freed cells in a Vec.
@@ -155,7 +165,6 @@ impl<T> Arena<T>{
                     })
                 }
                 else{
-                    //panic!("First freed index pointent to element that was not freed.");
                     Err(val)
                 }
             }
@@ -201,7 +210,7 @@ impl<T> Arena<T>{
     }
 
     ///
-    ///
+    /// Removes the cell from the arena and increaces its generation.
     ///
     pub fn remove(&mut self, index: ArenaIdx<T>){
         if let ArenaCell::Allocated{val: _, generation} = &self.cells[index.index]{
@@ -247,6 +256,33 @@ impl<T> Arena<T>{
     }
 
     ///
+    /// Get N optional references to N indices in the arena.
+    ///
+    /// ```rust
+    /// use gen_arena::*;
+    ///
+    /// let mut arena = Arena::new();
+    ///
+    /// let i1 = arena.insert(1);
+    /// let i2 = arena.insert(2);
+    ///
+    /// let res = arena.getn([i1, i2]);
+    ///
+    /// assert_eq!(*res[0].unwrap(), 1);
+    /// assert_eq!(*res[1].unwrap(), 2);
+    ///
+    /// ```
+    ///
+    pub fn getn<const N: usize>(&self, indices: [ArenaIdx<T>; N]) -> [Option<&T>; N]{
+        let mut ret = [None; N];
+
+        for (i, index) in indices.iter().enumerate(){
+            ret[i] = self.get(*index);
+        }
+        ret
+    }
+
+    ///
     /// Returns a mutable optional reference to the value at the index.
     ///
     /// ```rust
@@ -280,6 +316,90 @@ impl<T> Arena<T>{
         else{
             None
         }
+    }
+
+    ///
+    /// Returns mutable optional references to two distinct values.
+    /// Indices have to be different.
+    ///
+    ///```rust
+    /// use gen_arena::*;
+    ///
+    /// let mut arena = Arena::new();
+    ///
+    /// let i1 = arena.insert(1);
+    /// let i2 = arena.insert(2);
+    ///
+    /// let (c1, c2) = arena.get2_mut((i1, i2));
+    ///
+    /// *c1.unwrap() = 3;
+    /// *c2.unwrap() = 4;
+    ///
+    /// assert_eq!(*arena.get(i1).unwrap(), 3);
+    /// assert_eq!(*arena.get(i2).unwrap(), 4);
+    ///
+    ///```
+    ///
+    pub fn get2_mut(&mut self, indices: (ArenaIdx<T>, ArenaIdx<T>)) -> (Option<&mut T>, Option<&mut T>){
+        if indices.0.index == indices.1.index{
+            if indices.0.generation == indices.1.generation{
+                panic!("Cannot take 2 mutable references to a value at the same index.")
+            }
+
+            if indices.0.generation > indices.1.generation{
+                return (self.get_mut(indices.0), None);
+            }
+            else{
+                return (None, self.get_mut(indices.1));
+            }
+        }
+
+        if indices.0.index >= self.cells.len(){
+            return (None, self.get_mut(indices.1));
+        }
+        if indices.1.index >= self.cells.len(){
+            return (self.get_mut(indices.0), None);
+        }
+
+        let (cell0, cell1) = {
+            let split = self.cells.split_at_mut(indices.0.index.max(indices.1.index));
+            if indices.0.index < indices.1.index{
+                (&mut split.0[indices.0.index], &mut split.1[0])
+            }
+            else{
+                (&mut split.1[0], &mut split.0[indices.1.index])
+            }
+        };
+
+        let cell0 = match cell0{
+            ArenaCell::Allocated{val, generation} => {
+                if indices.0.generation == *generation{
+                    Some(val)
+                }
+                else{
+                    None
+                }
+            },
+            _ => None
+        };
+        let cell1 = match cell1{
+            ArenaCell::Allocated{val, generation} => {
+                if indices.1.generation == *generation{
+                    Some(val)
+                }
+                else{
+                    None
+                }
+            },
+            _ => None
+        };
+
+        (cell0, cell1)
+    }
+
+    #[inline]
+    pub fn reserve(&mut self, additional: usize){
+        self.cells.reserve(additional)
     }
 
     #[inline]

@@ -504,7 +504,7 @@ impl<T> Arena<T>{
     #[inline]
     pub fn iter(&self) -> Iter<T>{
         Iter{
-            iter: self.cells.iter().enumerate(),
+            iter: self.enumerate()
         }
     }
 
@@ -530,7 +530,7 @@ impl<T> Arena<T>{
     #[inline]
     pub fn iter_mut(&mut self) -> IterMut<T>{
         IterMut{
-            iter: self.cells.iter_mut().enumerate(),
+            iter: self.enumerate_mut()
         }
     }
 
@@ -556,7 +556,7 @@ impl<T> Arena<T>{
     /// ```
     ///
     #[inline]
-    pub fn enumerate(&mut self) -> Enumerator<T>{
+    pub fn enumerate(&self) -> Enumerator<T>{
         Enumerator{
             iter: self.cells.iter().enumerate(),
         }
@@ -639,20 +639,14 @@ impl<'i, T> Iterator for Enumerator<'i, T>{
 }
 
 pub struct Iter<'i, T: 'i>{
-    iter: std::iter::Enumerate<std::slice::Iter<'i, ArenaCell<T>>>,
+    iter: Enumerator<'i, T>,
 }
 
 impl<'i, T> Iterator for Iter<'i, T>{
     type Item = &'i T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop{
-            match self.iter.next(){
-                Some((_, ArenaCell::Freed{..})) => continue,
-                Some((_, ArenaCell::Allocated{val, ..})) => return Some(val),
-                None => return None,
-            }
-        }
+        self.iter.next().map(|(_, val)|{val})
     }
 }
 
@@ -677,22 +671,14 @@ impl<'i, T> Iterator for EnumeratorMut<'i, T>{
 }
 
 pub struct IterMut<'i, T: 'i>{
-    iter: std::iter::Enumerate<std::slice::IterMut<'i, ArenaCell<T>>>,
+    iter: EnumeratorMut<'i, T>,
 }
 
 impl<'i, T> Iterator for IterMut<'i, T>{
     type Item = &'i mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop{
-            match self.iter.next(){
-                Some((_, ArenaCell::Freed{..})) => continue,
-                Some((_, ArenaCell::Allocated{val, ..})) => {
-                    return Some(val);
-                }
-                None => {return None;},
-            }
-        }
+        self.iter.next().map(|(_, val)|{val})
     }
 }
 

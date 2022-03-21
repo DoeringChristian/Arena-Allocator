@@ -13,7 +13,7 @@ pub enum ArenaCell<T>{
 ///
 /// An index referring to an index and epoch in an Arena.
 ///
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ArenaIdx<T>{
     index: usize,
     generation: usize,
@@ -27,6 +27,16 @@ impl<T> ArenaIdx<T>{
             generation,
             _ty: PhantomData,
         }
+    }
+
+    #[inline]
+    pub fn index(&self) -> usize{
+        self.index
+    }
+
+    #[inline]
+    pub fn gen(&self) -> usize{
+        self.generation
     }
 }
 
@@ -475,6 +485,109 @@ impl<T> Arena<T>{
         todo!()
     }
 
+    ///
+    /// Returns iterator over all Allocated cells.
+    ///
+    /// ```rust
+    /// use gen_arena::*;
+    /// let mut arena = Arena::new();
+    ///
+    /// let i1 = arena.insert(1);
+    /// let i2 = arena.insert(1);
+    ///
+    /// for val in arena.iter(){
+    ///     assert_eq!(*val, 1);
+    /// }
+    ///
+    /// ```
+    ///
+    #[inline]
+    pub fn iter(&self) -> Iter<T>{
+        Iter{
+            iter: self.cells.iter().enumerate(),
+        }
+    }
+
+    ///
+    /// Returns mutable iterator over all Allocated cells.
+    ///
+    /// ```rust
+    /// use gen_arena::*;
+    /// let mut arena = Arena::new();
+    ///
+    /// let i1 = arena.insert(1);
+    /// let i2 = arena.insert(2);
+    ///
+    /// for val in arena.iter_mut(){
+    ///     *val = 0;
+    /// }
+    ///
+    /// assert_eq!(*arena.get(i1).unwrap(), 0);
+    /// assert_eq!(*arena.get(i2).unwrap(), 0);
+    ///
+    /// ```
+    ///
+    #[inline]
+    pub fn iter_mut(&mut self) -> IterMut<T>{
+        IterMut{
+            iter: self.cells.iter_mut().enumerate(),
+        }
+    }
+
+    ///
+    /// Returns an iterator over the Allocated cells with index.
+    ///
+    /// ```rust
+    /// use gen_arena::*;
+    /// let mut arena = Arena::new();
+    ///
+    /// let i1 = arena.insert(1);
+    /// let i2 = arena.insert(2);
+    ///
+    /// for (index, val) in arena.enumerate(){
+    ///     if index == i1{
+    ///         assert_eq!(*val, 1);
+    ///     }
+    ///     if index == i2{
+    ///         assert_eq!(*val, 2);
+    ///     }
+    /// }
+    ///
+    /// ```
+    ///
+    #[inline]
+    pub fn enumerate(&mut self) -> Enumerator<T>{
+        Enumerator{
+            iter: self.cells.iter().enumerate(),
+        }
+    }
+
+    ///
+    /// Returns an mutable iterator over the Allocated cells with indices.
+    ///
+    /// ```rust
+    /// use gen_arena::*;
+    /// let mut arena = Arena::new();
+    ///
+    /// let i1 = arena.insert(1);
+    /// let i2 = arena.insert(2);
+    /// 
+    /// for (index, val) in arena.enumerate_mut(){
+    ///     *val = index.index();
+    /// }
+    ///
+    /// assert_eq!(*arena.get(i1).unwrap(), 0);
+    /// assert_eq!(*arena.get(i2).unwrap(), 1);
+    ///
+    /// ```
+    ///
+    #[inline]
+    pub fn enumerate_mut(&mut self) -> EnumeratorMut<T>{
+        EnumeratorMut{
+            iter: self.cells.iter_mut().enumerate(),
+        }
+    }
+
     #[inline]
     pub fn reserve(&mut self, additional: usize){
         self.cells.reserve(additional)
@@ -505,6 +618,84 @@ impl<T> IndexMut<ArenaIdx<T>> for Arena<T>{
     }
 }
 
+pub struct Enumerator<'i, T: 'i>{
+    iter: std::iter::Enumerate<std::slice::Iter<'i, ArenaCell<T>>>,
+}
+
+impl<'i, T> Iterator for Enumerator<'i, T>{
+    type Item = (ArenaIdx<T>, &'i T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop{
+            match self.iter.next(){
+                Some((_, ArenaCell::Freed{..})) => continue,
+                Some((i, ArenaCell::Allocated{val, generation})) => {
+                    return Some((ArenaIdx::new(i, *generation), val));
+                }
+                None => {return None;},
+            }
+        }
+    }
+}
+
+pub struct Iter<'i, T: 'i>{
+    iter: std::iter::Enumerate<std::slice::Iter<'i, ArenaCell<T>>>,
+}
+
+impl<'i, T> Iterator for Iter<'i, T>{
+    type Item = &'i T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop{
+            match self.iter.next(){
+                Some((_, ArenaCell::Freed{..})) => continue,
+                Some((_, ArenaCell::Allocated{val, ..})) => return Some(val),
+                None => return None,
+            }
+        }
+    }
+}
+
+pub struct EnumeratorMut<'i, T: 'i>{
+    iter: std::iter::Enumerate<std::slice::IterMut<'i, ArenaCell<T>>>,
+}
+
+impl<'i, T> Iterator for EnumeratorMut<'i, T>{
+    type Item = (ArenaIdx<T>, &'i mut T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop{
+            match self.iter.next(){
+                Some((_, ArenaCell::Freed{..})) => continue,
+                Some((i, ArenaCell::Allocated{val, generation})) => {
+                    return Some((ArenaIdx::new(i, *generation), val));
+                }
+                None => {return None;},
+            }
+        }
+    }
+}
+
+pub struct IterMut<'i, T: 'i>{
+    iter: std::iter::Enumerate<std::slice::IterMut<'i, ArenaCell<T>>>,
+}
+
+impl<'i, T> Iterator for IterMut<'i, T>{
+    type Item = &'i mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop{
+            match self.iter.next(){
+                Some((_, ArenaCell::Freed{..})) => continue,
+                Some((_, ArenaCell::Allocated{val, ..})) => {
+                    return Some(val);
+                }
+                None => {return None;},
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test{
     use super::*;
@@ -526,6 +717,10 @@ mod test{
 
         assert_eq!(*arena.get(i2).unwrap(), 2);
         assert_eq!(arena.get(i1), None);
+
+        arena.enumerate().for_each(|(index, val)|{
+            println!("{}, {}", index.index(), val);
+        });
     }
 }
 

@@ -20,6 +20,16 @@ pub struct ArenaIdx<T>{
     _ty: PhantomData<T>,
 }
 
+impl<T> ArenaIdx<T>{
+    fn new(index: usize, generation: usize) -> Self{
+        Self{
+            index,
+            generation,
+            _ty: PhantomData,
+        }
+    }
+}
+
 // Have to implement copy and clone myselfe because of generic.
 impl<T> Clone for ArenaIdx<T>{
     #[inline]
@@ -395,6 +405,40 @@ impl<T> Arena<T>{
         };
 
         (cell0, cell1)
+    }
+
+    ///
+    /// Retunrs multiple references to elements in diffrent cells.
+    /// Indices have to be seperate else the function returns None.
+    ///
+    pub fn getn_mut<const N: usize>(&mut self, indices: [ArenaIdx<T>; N]) -> Option<[&mut T; N]>{
+        unimplemented!();
+        let tmp: Option<usize> = None;
+
+        for index in indices{
+            if let Some(tmp) = tmp{
+                if tmp == index.index{
+                    return None;
+                }
+            }
+        }
+
+        unsafe{
+            let mut retp: [*mut T; N] = [std::ptr::null_mut(); N];
+            for (i, index) in indices.iter().enumerate(){
+                match &mut self.cells[index.index]{
+                    ArenaCell::Allocated{val, generation} if index.generation == *generation =>{
+                        retp[i] = val as *mut T;
+                    }
+                    _ => {return None},
+                }
+            }
+            let mut ret: [&mut T; N];
+            for (i, p) in retp.iter().enumerate(){
+            }
+        }
+
+        todo!()
     }
 
     #[inline]

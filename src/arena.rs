@@ -234,6 +234,16 @@ impl<T> Arena<T>{
     }
 
     ///
+    /// Gets the Generation for a given index.
+    ///
+    pub fn gen(&self, index: usize) -> usize{
+        match self.cells[index]{
+            ArenaCell::Freed{generation, ..} => generation,
+            ArenaCell::Allocated{generation, ..} => generation,
+        }
+    }
+
+    ///
     /// Returns an optional reference to the value at the index.
     ///
     /// ```rust
@@ -259,6 +269,18 @@ impl<T> Arena<T>{
             else{
                 None
             }
+        }
+        else{
+            None
+        }
+    }
+
+    ///
+    /// Returns an optional reference to a cell with any generation.
+    ///
+    pub fn get_any(&self, index: usize) -> Option<&T>{
+        if let ArenaCell::Allocated{val, generation: _} = &self.cells[index]{
+            Some(val)
         }
         else{
             None
@@ -322,6 +344,18 @@ impl<T> Arena<T>{
             else{
                 None
             }
+        }
+        else{
+            None
+        }
+    }
+
+    ///
+    /// Returns an optional mutable reference to the value of a cell at a index with any generation.
+    ///
+    pub fn get_any_mut(&mut self, index: usize) -> Option<&mut T>{
+        if let ArenaCell::Allocated{val, generation: _} = &mut self.cells[index]{
+            Some(val)
         }
         else{
             None

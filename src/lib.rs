@@ -1,7 +1,9 @@
 
 pub mod arena;
+pub mod sarena;
 
 pub use arena::*;
+pub use sarena::*;
 
 #[cfg(test)]
 mod tests {

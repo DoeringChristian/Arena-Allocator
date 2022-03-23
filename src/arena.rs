@@ -462,16 +462,16 @@ impl<T> Arena<T>{
     /// let i1 = arena.insert(1);
     /// let i2 = arena.insert(1);
     ///
-    /// for val in arena.iter(){
+    /// for val in arena.values(){
     ///     assert_eq!(*val, 1);
     /// }
     ///
     /// ```
     ///
     #[inline]
-    pub fn iter(&self) -> Iter<T>{
-        Iter{
-            iter: self.enumerate()
+    pub fn values(&self) -> Values<T>{
+        Values{
+            iter: self.iter()
         }
     }
 
@@ -485,7 +485,7 @@ impl<T> Arena<T>{
     /// let i1 = arena.insert(1);
     /// let i2 = arena.insert(2);
     ///
-    /// for val in arena.iter_mut(){
+    /// for val in arena.values_mut(){
     ///     *val = 0;
     /// }
     ///
@@ -495,9 +495,36 @@ impl<T> Arena<T>{
     /// ```
     ///
     #[inline]
-    pub fn iter_mut(&mut self) -> IterMut<T>{
-        IterMut{
-            iter: self.enumerate_mut()
+    pub fn values_mut(&mut self) -> ValuesMut<T>{
+        ValuesMut{
+            iter: self.iter_mut()
+        }
+    }
+
+    ///
+    /// Iterator over all keys in the Arena.
+    ///
+    /// ```rust
+    /// use gen_arena::*;
+    /// let mut arena = Arena::new();
+    ///
+    /// let i1 = arena.insert(1);
+    /// let i2 = arena.insert(2);
+    ///
+    /// for (i, key) in arena.keys().enumerate(){
+    ///     if i == 0{
+    ///         assert_eq!(key, ArenaIdx::new(0, 0));
+    ///     }
+    ///     if i == 1{
+    ///         assert_eq!(key, ArenaIdx::new(1, 0));
+    ///     }
+    /// }
+    /// ```
+    ///
+    #[inline]
+    pub fn keys(&self) -> Keys<T>{
+        Keys{
+            iter: self.iter(),
         }
     }
 
@@ -511,7 +538,7 @@ impl<T> Arena<T>{
     /// let i1 = arena.insert(1);
     /// let i2 = arena.insert(2);
     ///
-    /// for (index, val) in arena.enumerate(){
+    /// for (index, val) in arena.iter(){
     ///     if index == i1{
     ///         assert_eq!(*val, 1);
     ///     }
@@ -523,8 +550,8 @@ impl<T> Arena<T>{
     /// ```
     ///
     #[inline]
-    pub fn enumerate(&self) -> Enumerator<T>{
-        Enumerator{
+    pub fn iter(&self) -> Iter<T>{
+        Iter{
             iter: self.cells.iter().enumerate(),
         }
     }
@@ -539,7 +566,7 @@ impl<T> Arena<T>{
     /// let i1 = arena.insert(1);
     /// let i2 = arena.insert(2);
     /// 
-    /// for (index, val) in arena.enumerate_mut(){
+    /// for (index, val) in arena.iter_mut(){
     ///     *val = index.index();
     /// }
     ///
@@ -549,8 +576,8 @@ impl<T> Arena<T>{
     /// ```
     ///
     #[inline]
-    pub fn enumerate_mut(&mut self) -> EnumeratorMut<T>{
-        EnumeratorMut{
+    pub fn iter_mut(&mut self) -> IterMut<T>{
+        IterMut{
             iter: self.cells.iter_mut().enumerate(),
         }
     }
@@ -585,11 +612,11 @@ impl<T> IndexMut<ArenaIdx<T>> for Arena<T>{
     }
 }
 
-pub struct Enumerator<'i, T: 'i>{
+pub struct Iter<'i, T: 'i>{
     pub(crate) iter: std::iter::Enumerate<std::slice::Iter<'i, ArenaCell<T>>>,
 }
 
-impl<'i, T> Iterator for Enumerator<'i, T>{
+impl<'i, T> Iterator for Iter<'i, T>{
     type Item = (ArenaIdx<T>, &'i T);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -605,11 +632,11 @@ impl<'i, T> Iterator for Enumerator<'i, T>{
     }
 }
 
-pub struct Iter<'i, T: 'i>{
-    pub (crate) iter: Enumerator<'i, T>,
+pub struct Values<'i, T: 'i>{
+    pub (crate) iter: Iter<'i, T>,
 }
 
-impl<'i, T> Iterator for Iter<'i, T>{
+impl<'i, T> Iterator for Values<'i, T>{
     type Item = &'i T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -617,11 +644,11 @@ impl<'i, T> Iterator for Iter<'i, T>{
     }
 }
 
-pub struct EnumeratorMut<'i, T: 'i>{
+pub struct IterMut<'i, T: 'i>{
     pub(crate) iter: std::iter::Enumerate<std::slice::IterMut<'i, ArenaCell<T>>>,
 }
 
-impl<'i, T> Iterator for EnumeratorMut<'i, T>{
+impl<'i, T> Iterator for IterMut<'i, T>{
     type Item = (ArenaIdx<T>, &'i mut T);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -637,15 +664,27 @@ impl<'i, T> Iterator for EnumeratorMut<'i, T>{
     }
 }
 
-pub struct IterMut<'i, T: 'i>{
-    pub(crate) iter: EnumeratorMut<'i, T>,
+pub struct ValuesMut<'i, T: 'i>{
+    pub(crate) iter: IterMut<'i, T>,
 }
 
-impl<'i, T> Iterator for IterMut<'i, T>{
+impl<'i, T> Iterator for ValuesMut<'i, T>{
     type Item = &'i mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(_, val)|{val})
+    }
+}
+
+pub struct Keys<'i, T: 'i>{
+    pub(crate) iter: Iter<'i, T>,
+}
+
+impl<'i, T> Iterator for Keys<'i, T>{
+    type Item = ArenaIdx<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|(i, _)|{i})
     }
 }
 
@@ -671,7 +710,7 @@ mod test{
         assert_eq!(*arena.get(i2).unwrap(), 2);
         assert_eq!(arena.get(i1), None);
 
-        arena.enumerate().for_each(|(index, val)|{
+        arena.iter().for_each(|(index, val)|{
             println!("{}, {}", index.index(), val);
         });
     }

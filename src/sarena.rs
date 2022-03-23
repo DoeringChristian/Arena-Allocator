@@ -394,8 +394,8 @@ impl<T, const N: usize> SArena<T, N>{
     /// ```
     ///
     #[inline]
-    pub fn iter(&self) -> Iter<T>{
-        Iter{
+    pub fn iter(&self) -> Values<T>{
+        Values{
             iter: self.enumerate()
         }
     }
@@ -420,8 +420,8 @@ impl<T, const N: usize> SArena<T, N>{
     /// ```
     ///
     #[inline]
-    pub fn iter_mut(&mut self) -> IterMut<T>{
-        IterMut{
+    pub fn iter_mut(&mut self) -> ValuesMut<T>{
+        ValuesMut{
             iter: self.enumerate_mut()
         }
     }
@@ -449,8 +449,8 @@ impl<T, const N: usize> SArena<T, N>{
     /// ```
     ///
     #[inline]
-    pub fn enumerate(&self) -> Enumerator<T>{
-        Enumerator{
+    pub fn enumerate(&self) -> Iter<T>{
+        Iter{
             iter: self.cells.iter().enumerate(),
         }
     }
@@ -475,8 +475,8 @@ impl<T, const N: usize> SArena<T, N>{
     /// ```
     ///
     #[inline]
-    pub fn enumerate_mut(&mut self) -> EnumeratorMut<T>{
-        EnumeratorMut{
+    pub fn enumerate_mut(&mut self) -> IterMut<T>{
+        IterMut{
             iter: self.cells.iter_mut().enumerate(),
         }
     }

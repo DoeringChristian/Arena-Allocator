@@ -452,6 +452,20 @@ impl<T> Arena<T>{
         (cell0, cell1)
     }
 
+    // TODO: implement
+    pub fn getn_mut<const N: usize>(&mut self, indices: [ArenaIdx<T>; N]) -> Option<[ArenaIdx<T>; N]>{
+        let mut i = 0;
+        for index in indices{
+
+        }
+        let mut i = 0;
+        let indices = indices.map(|index|{
+            i += 1;
+            (i - 1, index)
+        });
+        todo!()
+    }
+
     ///
     /// Returns iterator over all Allocated cells.
     ///
@@ -469,8 +483,8 @@ impl<T> Arena<T>{
     /// ```
     ///
     #[inline]
-    pub fn values(&self) -> Values<T>{
-        Values{
+    pub fn values(&self) -> ValueIter<T>{
+        ValueIter{
             iter: self.iter()
         }
     }
@@ -495,8 +509,8 @@ impl<T> Arena<T>{
     /// ```
     ///
     #[inline]
-    pub fn values_mut(&mut self) -> ValuesMut<T>{
-        ValuesMut{
+    pub fn values_mut(&mut self) -> ValueIterMut<T>{
+        ValueIterMut{
             iter: self.iter_mut()
         }
     }
@@ -522,8 +536,8 @@ impl<T> Arena<T>{
     /// ```
     ///
     #[inline]
-    pub fn keys(&self) -> Keys<T>{
-        Keys{
+    pub fn keys(&self) -> KeyIter<T>{
+        KeyIter{
             iter: self.iter(),
         }
     }
@@ -632,11 +646,11 @@ impl<'i, T> Iterator for Iter<'i, T>{
     }
 }
 
-pub struct Values<'i, T: 'i>{
+pub struct ValueIter<'i, T: 'i>{
     pub (crate) iter: Iter<'i, T>,
 }
 
-impl<'i, T> Iterator for Values<'i, T>{
+impl<'i, T> Iterator for ValueIter<'i, T>{
     type Item = &'i T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -664,11 +678,11 @@ impl<'i, T> Iterator for IterMut<'i, T>{
     }
 }
 
-pub struct ValuesMut<'i, T: 'i>{
+pub struct ValueIterMut<'i, T: 'i>{
     pub(crate) iter: IterMut<'i, T>,
 }
 
-impl<'i, T> Iterator for ValuesMut<'i, T>{
+impl<'i, T> Iterator for ValueIterMut<'i, T>{
     type Item = &'i mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -676,11 +690,11 @@ impl<'i, T> Iterator for ValuesMut<'i, T>{
     }
 }
 
-pub struct Keys<'i, T: 'i>{
+pub struct KeyIter<'i, T: 'i>{
     pub(crate) iter: Iter<'i, T>,
 }
 
-impl<'i, T> Iterator for Keys<'i, T>{
+impl<'i, T> Iterator for KeyIter<'i, T>{
     type Item = ArenaIdx<T>;
 
     fn next(&mut self) -> Option<Self::Item> {

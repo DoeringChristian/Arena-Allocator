@@ -51,7 +51,7 @@ impl<T> Clone for ArenaIdx<T>{
 impl<T> Copy for ArenaIdx<T>{}
 
 ///
-/// An Arena allocator that keeps track of freed cells in a Vec.
+/// An Generational Arena that keeps track of freed cells in a Vec.
 ///
 /// # Example
 ///
@@ -483,8 +483,8 @@ impl<T> Arena<T>{
     /// ```
     ///
     #[inline]
-    pub fn values(&self) -> ValueIter<T>{
-        ValueIter{
+    pub fn values(&self) -> Values<T>{
+        Values{
             iter: self.iter()
         }
     }
@@ -509,8 +509,8 @@ impl<T> Arena<T>{
     /// ```
     ///
     #[inline]
-    pub fn values_mut(&mut self) -> ValueIterMut<T>{
-        ValueIterMut{
+    pub fn values_mut(&mut self) -> ValuesMut<T>{
+        ValuesMut{
             iter: self.iter_mut()
         }
     }
@@ -536,8 +536,8 @@ impl<T> Arena<T>{
     /// ```
     ///
     #[inline]
-    pub fn keys(&self) -> KeyIter<T>{
-        KeyIter{
+    pub fn keys(&self) -> Keys<T>{
+        Keys{
             iter: self.iter(),
         }
     }
@@ -646,11 +646,11 @@ impl<'i, T> Iterator for Iter<'i, T>{
     }
 }
 
-pub struct ValueIter<'i, T: 'i>{
+pub struct Values<'i, T: 'i>{
     pub (crate) iter: Iter<'i, T>,
 }
 
-impl<'i, T> Iterator for ValueIter<'i, T>{
+impl<'i, T> Iterator for Values<'i, T>{
     type Item = &'i T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -678,11 +678,11 @@ impl<'i, T> Iterator for IterMut<'i, T>{
     }
 }
 
-pub struct ValueIterMut<'i, T: 'i>{
+pub struct ValuesMut<'i, T: 'i>{
     pub(crate) iter: IterMut<'i, T>,
 }
 
-impl<'i, T> Iterator for ValueIterMut<'i, T>{
+impl<'i, T> Iterator for ValuesMut<'i, T>{
     type Item = &'i mut T;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -690,11 +690,11 @@ impl<'i, T> Iterator for ValueIterMut<'i, T>{
     }
 }
 
-pub struct KeyIter<'i, T: 'i>{
+pub struct Keys<'i, T: 'i>{
     pub(crate) iter: Iter<'i, T>,
 }
 
-impl<'i, T> Iterator for KeyIter<'i, T>{
+impl<'i, T> Iterator for Keys<'i, T>{
     type Item = ArenaIdx<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
